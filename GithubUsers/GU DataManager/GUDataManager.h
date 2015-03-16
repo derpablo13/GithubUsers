@@ -9,55 +9,7 @@
 #import <Foundation/Foundation.h>
 #import "GUUserNode.h"
 
-@class GUDataManager;
-
-/**
- *  Protocol for GUDataManager delegate.
- */
-@protocol GUDataManagerDelegate <NSObject>
-
-@optional
-
-/**
- *  Will notify delegate about start downloading users data.
- *
- *  @param manager Data manager instance.
- */
-- (void)dataManagerDidStartDownloadingUsersData:(GUDataManager *)manager;
-
-/**
- *  Will notify delegate about finished downloading users data.
- *
- *  @param manager Data manager instance.
- *  @param content Array of GUUserNode objects.
- */
-- (void)dataManager:(GUDataManager *)manager didFinishDownloadingUsersData:(NSArray *)usersData;
-
-/**
- *  Will notify delegate about finished downloading image for cell at index path.
- *
- *  @param manager   Data manager instance.
- *  @param indexPath Index path of cell.
- */
-- (void)dataManager:(GUDataManager *)manager didFinishDownloadingImageForCellAtIndexPath:(NSIndexPath *)indexPath;
-
-/**
- *  Will notify delegate about downloading error with title and message.
- *
- *  @param manager Data manager instance.
- *  @param title   Error title.
- *  @param message Error message.
- */
-- (void)dataManager:(GUDataManager *)manager didFailDownloadingWithErrorTitle:(NSString *)title andMessage:(NSString *)message;
-
-@end
-
 @interface GUDataManager : NSObject
-
-/**
- *  Delegate of Data manager.
- */
-@property (nonatomic, weak) id <GUDataManagerDelegate> delegate;
 
 /**
  *  Array of GUUserNode objects.
@@ -66,23 +18,36 @@
 
 /**
  *  Will start downloading users data.
+ *
+ *  @param completionBlock Completion block.
  */
-- (void)downloadGithubUsersData;
+- (void)downloadGithubUsersDataWithCompletionBlock:(void (^)(NSArray *usersData, NSError *error, NSString *errorTitle, NSString *errorMessage))completionBlock;
 
 /**
- *  Will start downloading image for cell at index path with required size.
+ *  Will start downloading cell image for node at index with required size.
  *
- *  @param indexPath Index path of cell.
- *  @param imageSize Required image size.
+ *  @param index           Index of node.
+ *  @param imageSize       Required image size.
+ *  @param completionBlock Completion block.
  */
-- (void)downloadImageForCellAtIndexPath:(NSIndexPath *)indexPath
-                                andSize:(CGSize)imageSize;
+- (void)downloadCellImageForNodeWithIndex:(NSInteger)index
+                             requiredSize:(CGSize)imageSize
+                          completionBlock:(void (^)(UIImage *image, NSError *error, NSString *errorTitle, NSString *errorMessage))completionBlock;
 
 /**
- *  Will cancel downloading image for cell at index path.
+ *  Will cancel downloading cell image for node at index.
  *
- *  @param indexPath Index path of cell.
+ *  @param indexPath Index of node.
  */
-- (void)cancelDownloadImageForCellAtIndexPath:(NSIndexPath *)indexPath;
+- (void)cancelDownloadCellImageForNodeWithIndex:(NSInteger)index;
+
+/**
+ *  Check does users data array contains index.
+ *
+ *  @param index Index.
+ *
+ *  @return YES if contains.
+ */
+- (BOOL)usersDataContainsIndex:(NSInteger)index;
 
 @end

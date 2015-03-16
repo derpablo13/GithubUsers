@@ -12,8 +12,21 @@
 static NSString * const USER_CELL_IDENTIFIER = @"nodeCell";
 static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
 
-@interface MasterViewController () <GUDataManagerDelegate>
+@interface MasterViewController () <UITableViewDataSource, UITableViewDelegate>
 
+/**
+ *  Reference to table view.
+ */
+@property IBOutlet UITableView *tableView;
+
+/**
+ *  Activity indicator for preseting loading process.
+ */
+@property IBOutlet UIActivityIndicatorView *activityIndicator;
+
+/**
+ *  Data manager.
+ */
 @property GUDataManager *dataManager;
 
 @end
@@ -24,13 +37,30 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
     [super viewDidLoad];
     
     self.dataManager = [GUDataManager new];
-    self.dataManager.delegate = self;
     
-    [self.dataManager downloadGithubUsersData];
+    [self loadGithubUsersData];
 }
 
+#pragma mark - Actions
+
 - (IBAction)refreshButtonPressed:(id)sender {
-    [self.dataManager downloadGithubUsersData];
+    [self loadGithubUsersData];
+}
+
+#pragma mark - Load Github users data
+
+- (void)loadGithubUsersData {
+    [self showActivityIndicator];
+    
+    [self.dataManager downloadGithubUsersDataWithCompletionBlock:^(NSArray *usersData, NSError *error, NSString *errorTitle, NSString *errorMessage) {
+        if (error) {
+            [self showErrorAlertViewWithTitle:errorTitle
+                                      message:errorMessage];
+        }
+        
+        [self.tableView reloadData];
+        [self hideActivityIndicator];
+    }];
 }
 
 #pragma mark - Table View
@@ -48,7 +78,7 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
 }
 
 - (void)tableView:(UITableView *)tableView didEndDisplayingCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
-    [self.dataManager cancelDownloadImageForCellAtIndexPath:indexPath];
+    [self.dataManager cancelDownloadCellImageForNodeWithIndex:indexPath.row];
 }
 
 /**
@@ -66,7 +96,7 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
                                       reuseIdentifier:USER_CELL_IDENTIFIER];
     }
     
-    if (self.dataManager.usersData.count > indexPath.row) {
+    if ([self.dataManager usersDataContainsIndex:indexPath.row]) {
         GUUserNode *userNode = [self.dataManager.usersData objectAtIndex:indexPath.row];
         
         cell.textLabel.text = userNode.login;
@@ -78,9 +108,18 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
             // Set default image for cell.
             cell.imageView.image = [UIImage imageNamed:USER_CELL_DEFAULT_IMAGE];
             
-            // Start download image for cell.
-            [self.dataManager downloadImageForCellAtIndexPath:indexPath
-                                                      andSize:cell.imageView.image.size];
+            // Download image for cell.
+            [self.dataManager downloadCellImageForNodeWithIndex:indexPath.row
+                                                   requiredSize:cell.imageView.image.size
+                                                completionBlock:^(UIImage *image, NSError *error, NSString *errorTitle, NSString *errorMessage) {
+                                                    if (!error) {
+                                                        [self.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath]
+                                                                              withRowAnimation:UITableViewRowAnimationNone];
+                                                    } else {
+                                                        [self showErrorAlertViewWithTitle:errorTitle
+                                                                                  message:errorMessage];
+                                                    }
+                                                }];
         }
     } else {
         // Set default content for cell.
@@ -92,31 +131,16 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
     return cell;
 }
 
-#pragma mark - GUDataManagerDelegate
+#pragma mark - Error alert view
 
-- (void)dataManagerDidStartDownloadingUsersData:(GUDataManager *)manager {
-    [self showActivityIndicator];
-}
-
-- (void)dataManager:(GUDataManager *)manager didFinishDownloadingUsersData:(NSArray *)usersData {
-    [self.tableView reloadData];
-    [self hideActivityIndicator];
-}
-
-- (void)dataManager:(GUDataManager *)manager didFinishDownloadingImageForCellAtIndexPath:(NSIndexPath *)indexPath {
-    [self.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath]
-                          withRowAnimation:UITableViewRowAnimationNone];
-}
-
-- (void)dataManager:(GUDataManager *)manager didFailDownloadingWithErrorTitle:(NSString *)title andMessage:(NSString *)message {
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title
-                                                    message:message
+- (void)showErrorAlertViewWithTitle:(NSString *)errorTitle
+                            message:(NSString *)errorMessage {
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:errorTitle
+                                                    message:errorMessage
                                                    delegate:nil
                                           cancelButtonTitle:@"OK"
                                           otherButtonTitles:nil];
     [alert show];
-    
-    [self hideActivityIndicator];
 }
 
 #pragma mark - Activity indicator

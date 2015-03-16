@@ -10,10 +10,29 @@
 
 @interface AvatarImageViewController ()
 
+/**
+ *  Container view for image.
+ */
 @property IBOutlet UIView *containerView;
+
+/**
+ *  Avatar image view.
+ */
 @property IBOutlet UIImageView *imageView;
+
+/**
+ *  Activity indicator for preseting loading process.
+ */
 @property IBOutlet UIActivityIndicatorView *activityIndicator;
+
+/**
+ *  Avatar image view width constraint.
+ */
 @property IBOutlet NSLayoutConstraint *imageViewWidthConstraint;
+
+/**
+ *  Avatar image view height constraint.
+ */
 @property IBOutlet NSLayoutConstraint *imageViewHeightConstraint;
 
 @end
@@ -22,7 +41,6 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view.
     
     [self showActivityIndicator];
 }
@@ -37,12 +55,8 @@
                                             if (image && !error) {
                                                 [self setAvatarImage:image];
                                             } else {
-                                                UIAlertView *alert = [[UIAlertView alloc] initWithTitle:errorTitle
-                                                                                                message:errorMessage
-                                                                                               delegate:nil
-                                                                                      cancelButtonTitle:@"OK"
-                                                                                      otherButtonTitles:nil];
-                                                [alert show];
+                                                [self showErrorAlertViewWithTitle:errorTitle
+                                                                          message:errorMessage];
                                             }
                                             
                                             [self hideActivityIndicator];
@@ -56,6 +70,18 @@
     self.imageViewHeightConstraint.constant = self.imageView.frame.size.height;
     
     self.imageView.image = image;
+}
+
+#pragma mark - Error alert view
+
+- (void)showErrorAlertViewWithTitle:(NSString *)errorTitle
+                            message:(NSString *)errorMessage {
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:errorTitle
+                                                    message:errorMessage
+                                                   delegate:nil
+                                          cancelButtonTitle:@"OK"
+                                          otherButtonTitles:nil];
+    [alert show];
 }
 
 #pragma mark - Activity indicator

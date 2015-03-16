@@ -16,11 +16,11 @@ static NSString * const LOGIN_KEY = @"login";
 static NSString * const HTML_URL_KEY = @"html_url";
 static NSString * const AVATAR_URL_KEY = @"avatar_url";
 
-static NSString * const ERROR_DOWNLOADING_GITHUB_USERS_DATA_TITLE = @"Error downloading GitHub users data";
-static NSString * const ERROR_PARSING_GITHUB_USERS_DATA_TITLE = @"Error parsing GitHub users data";
-static NSString * const ERROR_DOWNLOADING_USERS_AVATAR_IMAGE_TITLE = @"Error downloading user's avatar image";
 static NSString * const NETWORK_ERROR_TITLE = @"Network error";
+static NSString * const DOWNLOAD_USERS_DATA_ERROR_MESSAGE = @"Can not download users data.\nPlease try again.";
 static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's avatar image.\nPlease try again.";
+static NSString * const PARSE_USERS_DATA_ERROR_TITLE = @"Parsing error";
+static NSString * const PARSE_USERS_DATA_ERROR_MESSAGE = @"Can not parse GitHub users data.\nPlease try again.";
 
 @interface GUDataManager()
 
@@ -49,9 +49,9 @@ static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's
 
 #pragma mark - Download users data
 
-- (void)downloadGithubUsersData {
-    if ([self.delegate respondsToSelector:@selector(dataManagerDidStartDownloadingUsersData:)]) {
-        [self.delegate dataManagerDidStartDownloadingUsersData:self];
+- (void)downloadGithubUsersDataWithCompletionBlock:(void (^)(NSArray *usersData, NSError *error, NSString *errorTitle, NSString *errorMessage))completionBlock {
+    if (!completionBlock) {
+        return;
     }
     
     // Clear previous users data objects.
@@ -62,49 +62,49 @@ static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's
     [NSURLConnection sendAsynchronousRequest:request
                                        queue:self.downloadUsersListQueue
                            completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-                               if (error) {
-                                   [self notifyDelegateAboutDownloadingErrorWithTitle:ERROR_DOWNLOADING_GITHUB_USERS_DATA_TITLE
-                                                                           andMessage:error.localizedDescription];
-                               } else {
-                                   [self parseUsersListFromData:data];
-                               }
+                               dispatch_async(dispatch_get_main_queue(), ^{
+                                   if (error || !data) {
+                                       completionBlock(nil, error, NETWORK_ERROR_TITLE, DOWNLOAD_USERS_DATA_ERROR_MESSAGE);
+                                   } else {
+                                       NSError *parseError = [self parseUsersListFromData:data];
+                                       completionBlock(self.usersData, parseError, PARSE_USERS_DATA_ERROR_TITLE, PARSE_USERS_DATA_ERROR_MESSAGE);
+                                   }
+                               });
                            }];
 }
 
-- (void)parseUsersListFromData:(NSData *)data {
+- (NSError *)parseUsersListFromData:(NSData *)data {
     NSError *error;
     NSArray *jsonArray = [NSJSONSerialization JSONObjectWithData:data
                                                          options:NSJSONReadingMutableContainers
                                                            error:&error];
     
-    if (error) {
-        [self notifyDelegateAboutDownloadingErrorWithTitle:ERROR_PARSING_GITHUB_USERS_DATA_TITLE
-                                                andMessage:error.localizedDescription];
-    } else {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            for (NSDictionary *userData in jsonArray) {
-                GUUserNode *userNode = [[GUUserNode alloc] initWithLogin:[userData objectForKey:LOGIN_KEY]
-                                                                 htmlURL:[userData objectForKey:HTML_URL_KEY]
-                                                               avatarURL:[userData objectForKey:AVATAR_URL_KEY]];
-                [self.usersData addObject:userNode];
-            }
-            
-            if ([self.delegate respondsToSelector:@selector(dataManager:didFinishDownloadingUsersData:)]) {
-                [self.delegate dataManager:self didFinishDownloadingUsersData:self.usersData];
-            }
-        });
+    if (!error) {
+        for (NSDictionary *userData in jsonArray) {
+            GUUserNode *userNode = [[GUUserNode alloc] initWithLogin:[userData objectForKey:LOGIN_KEY]
+                                                             htmlURL:[userData objectForKey:HTML_URL_KEY]
+                                                           avatarURL:[userData objectForKey:AVATAR_URL_KEY]];
+            [self.usersData addObject:userNode];
+        }
     }
+    
+    return error;
 }
 
 #pragma mark - Download user's avatar image
 
-- (void)downloadImageForCellAtIndexPath:(NSIndexPath *)indexPath
-                                andSize:(CGSize)imageSize {
-    if (indexPath.row >= self.usersData.count) {
+- (void)downloadCellImageForNodeWithIndex:(NSInteger)index
+                             requiredSize:(CGSize)imageSize
+                          completionBlock:(void (^)(UIImage *image, NSError *error, NSString *errorTitle, NSString *errorMessage))completionBlock {
+    if (!completionBlock) {
         return;
     }
     
-    GUUserNode *userNode = [self.usersData objectAtIndex:indexPath.row];
+    if (![self usersDataContainsIndex:index]) {
+        return;
+    }
+    
+    GUUserNode *userNode = [self.usersData objectAtIndex:index];
 
     if (!userNode.avatarURL) {
         return;
@@ -116,31 +116,24 @@ static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's
                                                   options:NSDataReadingMappedIfSafe
                                                     error:&error];
         
-        if (error) {
-            [self notifyDelegateAboutDownloadingErrorWithTitle:ERROR_DOWNLOADING_USERS_AVATAR_IMAGE_TITLE
-                                                    andMessage:error.localizedDescription];
-        } else {
-            userNode.avatarImage = [self imageWithImage:[UIImage imageWithData:imageData]
-                                           scaledToSize:imageSize];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!error) {
+                userNode.avatarImage = [self imageWithImage:[UIImage imageWithData:imageData]
+                                               scaledToSize:imageSize];
+            }
             
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if ([self.delegate respondsToSelector:@selector(dataManager:didFinishDownloadingImageForCellAtIndexPath:)]) {
-                    [self.delegate dataManager:self didFinishDownloadingImageForCellAtIndexPath:indexPath];
-                }
-            });
-        }
+            completionBlock(userNode.avatarImage, error, NETWORK_ERROR_TITLE, DOWNLOAD_IMAGE_ERROR_MESSAGE);
+        });
     }];
     
     [self.downloadImageQueue addOperation:userNode.downloadImageOperation];
 }
 
-- (void)cancelDownloadImageForCellAtIndexPath:(NSIndexPath *)indexPath {
-    if (indexPath.row >= self.usersData.count) {
-        return;
+- (void)cancelDownloadCellImageForNodeWithIndex:(NSInteger)index {
+    if ([self usersDataContainsIndex:index]) {
+        GUUserNode *userNode = [self.usersData objectAtIndex:index];
+        [userNode cancelDownloadImageOperation];
     }
-    
-    GUUserNode *userNode = [self.usersData objectAtIndex:indexPath.row];
-    [userNode cancelDownloadImageOperation];
 }
 
 - (void)downloadFullImageForNodeWithIndex:(NSInteger)index
@@ -150,7 +143,7 @@ static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's
         return;
     }
     
-    if (index >= self.usersData.count) {
+    if (![self usersDataContainsIndex:index]) {
         return;
     }
     
@@ -183,15 +176,10 @@ static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's
     [self.downloadImageQueue addOperation:downloadImageOperation];
 }
 
-#pragma mark - Notify delegate about downloading error
+#pragma mark - Check does users data array contains index
 
-- (void)notifyDelegateAboutDownloadingErrorWithTitle:(NSString *)title
-                                          andMessage:(NSString *)message {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if ([self.delegate respondsToSelector:@selector(dataManager:didFailDownloadingWithErrorTitle:andMessage:)]) {
-            [self.delegate dataManager:self didFailDownloadingWithErrorTitle:title andMessage:message];
-        }
-    });
+- (BOOL)usersDataContainsIndex:(NSInteger)index {
+    return self.usersData.count > index;
 }
 
 #pragma mark - Scaling image

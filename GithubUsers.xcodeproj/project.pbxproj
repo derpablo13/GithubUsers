@@ -17,6 +17,7 @@
 		EBA9ED741AB1DAA6004D3BCC /* GUDataManager.m in Sources */ = {isa = PBXBuildFile; fileRef = EBA9ED6F1AB1DAA6004D3BCC /* GUDataManager.m */; };
 		EBA9ED751AB1DAA6004D3BCC /* GUUserNode.m in Sources */ = {isa = PBXBuildFile; fileRef = EBA9ED721AB1DAA6004D3BCC /* GUUserNode.m */; };
 		EBAC30F51AB1E33E00BD7DDC /* no_photo.png in Resources */ = {isa = PBXBuildFile; fileRef = EBAC30F41AB1E33E00BD7DDC /* no_photo.png */; };
+		EBBFC8131AB32F9E00B4EB19 /* AvatarImageViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = EBBFC8121AB32F9E00B4EB19 /* AvatarImageViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,6 +49,8 @@
 		EBA9ED711AB1DAA6004D3BCC /* GUUserNode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GUUserNode.h; sourceTree = "<group>"; };
 		EBA9ED721AB1DAA6004D3BCC /* GUUserNode.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GUUserNode.m; sourceTree = "<group>"; };
 		EBAC30F41AB1E33E00BD7DDC /* no_photo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = no_photo.png; sourceTree = "<group>"; };
+		EBBFC8111AB32F9E00B4EB19 /* AvatarImageViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AvatarImageViewController.h; sourceTree = "<group>"; };
+		EBBFC8121AB32F9E00B4EB19 /* AvatarImageViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AvatarImageViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +96,8 @@
 				EBA14D1A1AB0BC3900ED9C00 /* AppDelegate.m */,
 				EBA14D1C1AB0BC3900ED9C00 /* MasterViewController.h */,
 				EBA14D1D1AB0BC3900ED9C00 /* MasterViewController.m */,
+				EBBFC8111AB32F9E00B4EB19 /* AvatarImageViewController.h */,
+				EBBFC8121AB32F9E00B4EB19 /* AvatarImageViewController.m */,
 				EBA9ED701AB1DAA6004D3BCC /* GU UserNode */,
 				EBA9ED6D1AB1DAA6004D3BCC /* GU DataManager */,
 				EBA14D221AB0BC3900ED9C00 /* Main.storyboard */,
@@ -258,6 +263,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EBA9ED751AB1DAA6004D3BCC /* GUUserNode.m in Sources */,
+				EBBFC8131AB32F9E00B4EB19 /* AvatarImageViewController.m in Sources */,
 				EBA14D1B1AB0BC3900ED9C00 /* AppDelegate.m in Sources */,
 				EBA14D1E1AB0BC3900ED9C00 /* MasterViewController.m in Sources */,
 				EBA14D181AB0BC3900ED9C00 /* main.m in Sources */,

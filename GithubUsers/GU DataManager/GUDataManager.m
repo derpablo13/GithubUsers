@@ -21,6 +21,8 @@ static NSString * const DOWNLOAD_USERS_DATA_ERROR_MESSAGE = @"Can not download u
 static NSString * const DOWNLOAD_IMAGE_ERROR_MESSAGE = @"Can not download user's avatar image.\nPlease try again.";
 static NSString * const PARSE_USERS_DATA_ERROR_TITLE = @"Parsing error";
 static NSString * const PARSE_USERS_DATA_ERROR_MESSAGE = @"Can not parse GitHub users data.\nPlease try again.";
+static NSString * const NO_USERS_DATA_ERROR_TITLE = @"No users data";
+static NSString * const NO_USERS_DATA_ERROR_MESSAGE = @"Currently no GitHub users data available.\nPlease try again.";
 
 @interface GUDataManager()
 
@@ -54,20 +56,24 @@ static NSString * const PARSE_USERS_DATA_ERROR_MESSAGE = @"Can not parse GitHub 
         return;
     }
     
-    // Clear previous users data objects.
-    [self.usersData removeAllObjects];
-    
     NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:GITHUB_USERS_URL]];
     
     [NSURLConnection sendAsynchronousRequest:request
                                        queue:self.downloadUsersListQueue
                            completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
                                dispatch_async(dispatch_get_main_queue(), ^{
+                                   // Clear previous users data objects.
+                                   [self.usersData removeAllObjects];
+                                   
                                    if (error || !data) {
                                        completionBlock(nil, error, NETWORK_ERROR_TITLE, DOWNLOAD_USERS_DATA_ERROR_MESSAGE);
                                    } else {
                                        NSError *parseError = [self parseUsersListFromData:data];
-                                       completionBlock(self.usersData, parseError, PARSE_USERS_DATA_ERROR_TITLE, PARSE_USERS_DATA_ERROR_MESSAGE);
+                                       if (!parseError && self.usersData.count == 0) {
+                                           completionBlock(self.usersData, [NSError new], NO_USERS_DATA_ERROR_TITLE, NO_USERS_DATA_ERROR_MESSAGE);
+                                       } else {
+                                           completionBlock(self.usersData, parseError, PARSE_USERS_DATA_ERROR_TITLE, PARSE_USERS_DATA_ERROR_MESSAGE);
+                                       }
                                    }
                                });
                            }];
@@ -80,11 +86,13 @@ static NSString * const PARSE_USERS_DATA_ERROR_MESSAGE = @"Can not parse GitHub 
                                                            error:&error];
     
     if (!error) {
-        for (NSDictionary *userData in jsonArray) {
-            GUUserNode *userNode = [[GUUserNode alloc] initWithLogin:[userData objectForKey:LOGIN_KEY]
-                                                             htmlURL:[userData objectForKey:HTML_URL_KEY]
-                                                           avatarURL:[userData objectForKey:AVATAR_URL_KEY]];
-            [self.usersData addObject:userNode];
+        for (id userData in jsonArray) {
+            if ([userData isKindOfClass:[NSDictionary class]]) {
+                GUUserNode *userNode = [[GUUserNode alloc] initWithLogin:[userData objectForKey:LOGIN_KEY]
+                                                                 htmlURL:[userData objectForKey:HTML_URL_KEY]
+                                                               avatarURL:[userData objectForKey:AVATAR_URL_KEY]];
+                [self.usersData addObject:userNode];
+            }
         }
     }
     

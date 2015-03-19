@@ -34,7 +34,7 @@
 /**
  *  Download avatar image operation.
  */
-@property (nonatomic, weak) NSOperation *downloadImageOperation;
+@property (nonatomic, weak) NSBlockOperation *downloadImageOperation;
 
 /**
  *  Will initialize user node with login name, profile URL and avatar URL.

@@ -8,9 +8,11 @@
 
 #import "MasterViewController.h"
 #import "GUDataManager.h"
+#import "AvatarImageViewController.h"
 
 static NSString * const USER_CELL_IDENTIFIER = @"nodeCell";
 static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
+static NSString * const DISPLAY_AVATAR_IMAGE_SEGUE_IDENTIFIER = @"displayAvatarImage";
 
 @interface MasterViewController () <UITableViewDataSource, UITableViewDelegate>
 
@@ -28,6 +30,11 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
  *  Data manager.
  */
 @property GUDataManager *dataManager;
+
+/**
+ *  Index of user for display it's avatar image.
+ */
+@property NSInteger indexOfUserForDisplayAvatarImage;
 
 @end
 
@@ -47,6 +54,17 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
     [self loadGithubUsersData];
 }
 
+- (IBAction)cellImagePressed:(id)sender {
+    UITapGestureRecognizer *tap = (UITapGestureRecognizer *)sender;
+    
+    if (self.dataManager.usersData.count > tap.view.tag) {
+        self.indexOfUserForDisplayAvatarImage = tap.view.tag;
+        
+        [self performSegueWithIdentifier:DISPLAY_AVATAR_IMAGE_SEGUE_IDENTIFIER
+                                  sender:self];
+    }
+}
+
 #pragma mark - Load Github users data
 
 - (void)loadGithubUsersData {
@@ -61,6 +79,16 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
         [self.tableView reloadData];
         [self hideActivityIndicator];
     }];
+}
+
+#pragma mark - Prepare for segue
+
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    if ([[segue identifier] isEqualToString:DISPLAY_AVATAR_IMAGE_SEGUE_IDENTIFIER]) {
+        AvatarImageViewController *avatarImageViewController = [segue destinationViewController];
+        avatarImageViewController.dataManager = self.dataManager;
+        avatarImageViewController.userIndex = self.indexOfUserForDisplayAvatarImage;
+    }
 }
 
 #pragma mark - Table View
@@ -95,6 +123,11 @@ static NSString * const USER_CELL_DEFAULT_IMAGE = @"no_photo.png";
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle
                                       reuseIdentifier:USER_CELL_IDENTIFIER];
     }
+    
+    cell.imageView.tag = indexPath.row;
+    
+    UITapGestureRecognizer *tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(cellImagePressed:)];
+    [cell.imageView addGestureRecognizer:tapGestureRecognizer];
     
     if ([self.dataManager usersDataContainsIndex:indexPath.row]) {
         GUUserNode *userNode = [self.dataManager.usersData objectAtIndex:indexPath.row];

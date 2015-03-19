@@ -146,6 +146,46 @@ static NSString * const NO_USERS_DATA_ERROR_MESSAGE = @"Currently no GitHub user
     }
 }
 
+- (void)downloadFullImageForNodeWithIndex:(NSInteger)index
+                             requiredSize:(CGSize)imageSize
+                          completionBlock:(void (^)(UIImage *image, NSError *error, NSString *errorTitle, NSString *errorMessage))completionBlock {
+    if (!completionBlock) {
+        return;
+    }
+    
+    if (![self usersDataContainsIndex:index]) {
+        return;
+    }
+    
+    GUUserNode *userNode = [self.usersData objectAtIndex:index];
+    
+    if (!userNode.avatarURL) {
+        return;
+    }
+    
+    NSBlockOperation *downloadImageOperation = [NSBlockOperation blockOperationWithBlock:^{
+        NSError *error;
+        NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:userNode.avatarURL]
+                                                  options:NSDataReadingMappedIfSafe
+                                                    error:&error];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIImage *avatarImage = nil;
+            
+            if (!error) {
+                UIImage *tempImage = [UIImage imageWithData:imageData];
+                CGFloat minImageSize = MIN(MIN(imageSize.width, imageSize.height), MIN(tempImage.size.width, tempImage.size.height));
+                avatarImage = [self imageWithImage:tempImage
+                                      scaledToSize:CGSizeMake(minImageSize, minImageSize)];
+            }
+            
+            completionBlock(avatarImage, error, NETWORK_ERROR_TITLE, DOWNLOAD_IMAGE_ERROR_MESSAGE);
+        });
+    }];
+    
+    [self.downloadImageQueue addOperation:downloadImageOperation];
+}
+
 #pragma mark - Check does users data array contains index
 
 - (BOOL)usersDataContainsIndex:(NSInteger)index {

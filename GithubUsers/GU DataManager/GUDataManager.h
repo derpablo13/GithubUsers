@@ -50,4 +50,15 @@
  */
 - (BOOL)usersDataContainsIndex:(NSInteger)index;
 
+/**
+ *  Will start downloading image for node at index path with required size.
+ *
+ *  @param index           Index of node.
+ *  @param imageSize       Required image size.
+ *  @param completionBlock Completion block.
+ */
+- (void)downloadFullImageForNodeWithIndex:(NSInteger)index
+                             requiredSize:(CGSize)imageSize
+                          completionBlock:(void (^)(UIImage *image, NSError *error, NSString *errorTitle, NSString *errorMessage))completionBlock;
+
 @end

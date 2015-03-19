@@ -110,7 +110,7 @@ static NSString * const PARSE_USERS_DATA_ERROR_MESSAGE = @"Can not parse GitHub 
         return;
     }
     
-    userNode.downloadImageOperation = [NSBlockOperation blockOperationWithBlock:^{
+    NSBlockOperation *downloadOperation = [NSBlockOperation blockOperationWithBlock:^{
         NSError *error;
         NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:userNode.avatarURL]
                                                   options:NSDataReadingMappedIfSafe
@@ -125,6 +125,8 @@ static NSString * const PARSE_USERS_DATA_ERROR_MESSAGE = @"Can not parse GitHub 
             completionBlock(userNode.avatarImage, error, NETWORK_ERROR_TITLE, DOWNLOAD_IMAGE_ERROR_MESSAGE);
         });
     }];
+    
+    userNode.downloadImageOperation = downloadOperation;
     
     [self.downloadImageQueue addOperation:userNode.downloadImageOperation];
 }
